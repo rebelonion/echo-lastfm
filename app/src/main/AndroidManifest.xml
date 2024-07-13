@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <uses-feature android:name="dev.brahmkshatriya.echo.tracker" />
+
+    <application
+        android:icon="@mipmap/ic_launcher"
+        android:label="@string/app_name">
+        <meta-data
+            android:name="class"
+            android:value="@string/class_path" />
+        <meta-data
+            android:name="id"
+            android:value="@string/id" />
+        <meta-data
+            android:name="name"
+            android:value="@string/name" />
+        <meta-data
+            android:name="version"
+            android:value="@string/version" />
+        <meta-data
+            android:name="description"
+            android:value="@string/description" />
+        <meta-data
+            android:name="author"
+            android:value="@string/author" />
+        <meta-data
+            android:name="icon_url"
+            android:value="@string/icon_url" />
+    </application>
+</manifest>

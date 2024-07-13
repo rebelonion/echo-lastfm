@@ -1,0 +1,10 @@
+<resources>
+    <string name="app_name">Echo : LastFM Extension</string>
+    <string name="class_path">dev.rebelonion.echo.extension.LastFM</string>
+    <string name="id">lastfm</string>
+    <string name="name">LastFM</string>
+    <string name="version">1.0.0</string>
+    <string name="description">LastFM Extension for Echo</string>
+    <string name="author">rebelonion</string>
+    <string name="icon_url">https://i.imgur.com/ArKIJYv.png</string>
+</resources>
