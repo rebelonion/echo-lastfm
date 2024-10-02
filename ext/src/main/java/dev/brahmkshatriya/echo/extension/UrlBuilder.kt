@@ -1,7 +1,7 @@
-package dev.rebelonion.echo.extension
+package dev.brahmkshatriya.echo.extension
 
-import dev.rebelonion.echo.extension.LastFMAPI.Companion.getApiKey
-import dev.rebelonion.echo.extension.LastFMAPI.Companion.getSecret
+import dev.brahmkshatriya.echo.extension.LastFMAPI.Companion.getApiKey
+import dev.brahmkshatriya.echo.extension.LastFMAPI.Companion.getSecret
 import java.math.BigInteger
 import java.net.URLEncoder
 import java.nio.charset.StandardCharsets

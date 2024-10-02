@@ -1,9 +1,9 @@
-package dev.rebelonion.echo.extension
+package dev.brahmkshatriya.echo.extension
 
-import dev.brahmkshatriya.echo.common.exceptions.LoginRequiredException
-import dev.brahmkshatriya.echo.common.models.ExtensionType
+import dev.brahmkshatriya.echo.common.helpers.ClientException
 import dev.brahmkshatriya.echo.common.models.ImageHolder.Companion.toImageHolder
 import dev.brahmkshatriya.echo.common.models.User
+import dev.brahmkshatriya.echo.config.BuildConfig
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.RequestBody
@@ -112,6 +112,10 @@ class LastFMAPI {
         this.user = user
     }
 
+    fun getUser(): User? {
+        return user
+    }
+
     private fun getSessionKey(): String? {
         return user?.id
     }
@@ -121,7 +125,7 @@ class LastFMAPI {
         return Request.Builder().url(url).post(sendBody).header("User-Agent", USER_AGENT).build()
     }
 
-    private fun sendRequest(url : String, body: RequestBody? = null): Pair<Int?, String> {
+    private fun sendRequest(url: String, body: RequestBody? = null): Pair<Int?, String> {
         val request = buildRequest(url, body)
         val response = client.newCall(request).execute()
         val responseBody = response.body.string()
@@ -134,18 +138,19 @@ class LastFMAPI {
     }
 
     private fun loginRequiredException() =
-        LoginRequiredException("lastfm", "LastFM", ExtensionType.TRACKER)
+        ClientException.LoginRequired()
 
     companion object {
         const val PLUGIN_IDENTIFIER = "Echo-Lastfm-Plugin"
-        private const val USER_AGENT = "$PLUGIN_IDENTIFIER/${BuildConfig.VERSION_NAME} (Android)"
+        private val USER_AGENT =
+            "$PLUGIN_IDENTIFIER/${BuildConfig.versionCode()} (${System.getProperty("os.name")}:${System.getProperty("os.version")})"
 
         fun getApiKey(): String {
-            return BuildConfig.API_KEY
+            return BuildConfig.getKey()
         }
 
         fun getSecret(): String {
-            return BuildConfig.API_SECRET
+            return BuildConfig.getSecret()
         }
     }
 }

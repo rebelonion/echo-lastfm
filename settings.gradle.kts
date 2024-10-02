@@ -18,4 +18,5 @@ dependencyResolutionManagement {
 
 rootProject.name = "echo-lastfm"
 include(":app")
+include(":ext")
  

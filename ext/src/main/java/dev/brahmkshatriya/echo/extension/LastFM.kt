@@ -1,4 +1,4 @@
-package dev.rebelonion.echo.extension
+package dev.brahmkshatriya.echo.extension
 
 import dev.brahmkshatriya.echo.common.clients.ExtensionClient
 import dev.brahmkshatriya.echo.common.clients.LoginClient
@@ -29,7 +29,16 @@ class LastFM : ExtensionClient, LoginClient.UsernamePassword, TrackerClient {
         api.sendNowPlaying(track.title, artists, track.album?.title)
     }
 
-    override suspend fun onStoppedPlaying(clientId: String, context: EchoMediaItem?, track: Track) {}
+    override suspend fun onStoppedPlaying(
+        clientId: String,
+        context: EchoMediaItem?,
+        track: Track
+    ) {
+    }
+
+    override suspend fun getCurrentUser(): User? {
+        return api.getUser()
+    }
 
     override suspend fun onLogin(username: String, password: String): List<User> {
         val user = api.login(username, password)

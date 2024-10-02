@@ -1,49 +1,67 @@
-import java.util.Properties
+import java.io.ByteArrayOutputStream
 
 plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
 }
 
-val extensionClass = "LastFM"
-val id = "lastfm"
-val name = "LastFM"
-val version = "1.0.0"
-val description = "LastFM Extension for Echo"
-val author = "rebelonion"
-val iconUrl: String = "https://i.imgur.com/ArKIJYv.png"
+dependencies {
+    implementation(project(":ext"))
+    val libVersion: String by project
+    compileOnly("com.github.brahmkshatriya:echo:$libVersion")
+}
+
+val extType: String by project
+val extId: String by project
+val extClass: String by project
+
+val extIconUrl: String? by project
+val extName: String by project
+val extDescription: String? by project
+
+val extAuthor: String by project
+val extAuthorUrl: String? by project
+
+val extRepoUrl: String? by project
+val extUpdateUrl: String? by project
+
+val gitHash = execute("git", "rev-parse", "HEAD").take(7)
+val gitCount = execute("git", "rev-list", "--count", "HEAD").toInt()
+val verCode = gitCount
+val verName = gitHash
+
+tasks.register("uninstall") {
+    exec {
+        isIgnoreExitValue = true
+        executable(android.adbExecutable)
+        args("shell", "pm", "uninstall", android.defaultConfig.applicationId!!)
+    }
+}
 
 android {
-    namespace = "dev.rebelonion.echo.extension"
-    compileSdk = 34
+    namespace = "dev.brahmkshatriya.echo.extension"
+    compileSdk = 35
 
     defaultConfig {
-        applicationId = "dev.rebelonion.echo.extension.lastfm"
+        applicationId = "dev.brahmkshatriya.echo.extension.$extId"
         minSdk = 24
-        targetSdk = 34
+        targetSdk = 35
 
-        versionCode = 1
-        versionName = version
-
-        resValue("string", "app_name", "Echo : $name Extension")
-        resValue("string", "class_path", "$namespace.$extensionClass")
-        resValue("string", "name", name)
-        resValue("string", "id", id)
-        resValue("string", "version", version)
-        resValue("string", "description", description)
-        resValue("string", "author", author)
-        resValue("string", "icon_url", iconUrl)
-
-        val properties = Properties().apply {
-            load(project.rootProject.file("local.properties").inputStream())
+        manifestPlaceholders.apply {
+            put("type", "dev.brahmkshatriya.echo.${extType}")
+            put("id", extId)
+            put("class_path", "dev.brahmkshatriya.echo.extension.${extClass}")
+            put("version", verName)
+            put("version_code", verCode.toString())
+            put("icon_url", extIconUrl ?: "")
+            put("app_name", "Echo : $extName Extension")
+            put("name", extName)
+            put("description", extDescription ?: "")
+            put("author", extAuthor)
+            put("author_url", extAuthorUrl ?: "")
+            put("repo_url", extRepoUrl ?: "")
+            put("update_url", extUpdateUrl ?: "")
         }
-
-        buildConfigField("String", "API_KEY", "\"${properties.getProperty("API_KEY")}\"")
-        buildConfigField("String", "API_SECRET", "\"${properties.getProperty("API_SECRET")}\"")
-        buildConfigField("String", "VERSION_NAME", "\"$versionName\"")
-
-
-        testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
 
@@ -58,31 +76,18 @@ android {
             )
         }
     }
-    compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_1_8
-        targetCompatibility = JavaVersion.VERSION_1_8
-    }
-    buildFeatures {
-        buildConfig = true
-    }
-    kotlinOptions {
-        jvmTarget = "1.8"
-    }
 
-    @Suppress("UnstableApiUsage") testOptions {
-        unitTests {
-            this.isReturnDefaultValues = true
-        }
+    compileOptions {
+        sourceCompatibility = JavaVersion.VERSION_17
+        targetCompatibility = JavaVersion.VERSION_17
     }
 }
 
-
-dependencies {
-    val libVersion = "38e1df03f6"
-    compileOnly("com.github.brahmkshatriya:echo:$libVersion")
-    implementation("com.github.Blatzar:NiceHttp:0.4.4")
-
-    testImplementation("junit:junit:4.13.2")
-    testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.8.1-Beta")
-    testImplementation("com.github.brahmkshatriya:echo:$libVersion")
+fun execute(vararg command: String): String {
+    val outputStream = ByteArrayOutputStream()
+    project.exec {
+        commandLine(*command)
+        standardOutput = outputStream
+    }
+    return outputStream.toString().trim()
 }

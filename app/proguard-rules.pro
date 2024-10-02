@@ -19,8 +19,7 @@
 # If you keep the line number information, uncomment this to
 # hide the original source file name.
 #-renamesourcefileattribute SourceFile
-
--keep class dev.rebelonion.echo.extension.LastFM {
+-keep class dev.brahmkshatriya.echo.extension.LastFM {
     *;
 }
 -keep class dev.brahmkshatriya.echo.common.** { *; }
@@ -43,3 +42,4 @@
     <methods>;
 }
 -keepnames class kotlin.coroutines.Continuation { *; }
+-dontwarn org.jspecify.annotations.NullMarked
