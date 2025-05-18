@@ -1,4 +1,4 @@
-package dev.brahmkshatriya.echo.extension
+package dev.brahmkshatriya.echo.extension.lastfm
 
 import dev.brahmkshatriya.echo.extension.LastFMAPI.Companion.getApiKey
 import dev.brahmkshatriya.echo.extension.LastFMAPI.Companion.getSecret

@@ -3,14 +3,13 @@ package dev.brahmkshatriya.echo.extension
 import dev.brahmkshatriya.echo.common.clients.ExtensionClient
 import dev.brahmkshatriya.echo.common.clients.LoginClient
 import dev.brahmkshatriya.echo.common.clients.TrackerClient
-import dev.brahmkshatriya.echo.common.models.EchoMediaItem
-import dev.brahmkshatriya.echo.common.models.Track
 import dev.brahmkshatriya.echo.common.models.TrackDetails
 import dev.brahmkshatriya.echo.common.models.User
 import dev.brahmkshatriya.echo.common.settings.Setting
 import dev.brahmkshatriya.echo.common.settings.Settings
+import dev.brahmkshatriya.echo.extension.lastfm.listOf
 
-class LastFM : ExtensionClient, LoginClient.UsernamePassword, TrackerClient {
+class LastFM : ExtensionClient, LoginClient.CustomInput, TrackerClient {
     private val api = LastFMAPI()
 
     override val markAsPlayedDuration: Long
@@ -37,7 +36,30 @@ class LastFM : ExtensionClient, LoginClient.UsernamePassword, TrackerClient {
         return api.getUser()
     }
 
-    override suspend fun onLogin(username: String, password: String): List<User> {
+    override val forms: List<LoginClient.Form>
+        get() = LoginClient.Form(
+            key = "login",
+            label = "Login",
+            icon = LoginClient.InputField.Type.Username,
+            inputFields = kotlin.collections.listOf(
+                LoginClient.InputField(
+                    type = LoginClient.InputField.Type.Username,
+                    key = "username",
+                    label = "Username",
+                    isRequired = true,
+                ),
+                LoginClient.InputField(
+                    type = LoginClient.InputField.Type.Password,
+                    key = "password",
+                    label = "Password",
+                    isRequired = true,
+                )
+            )
+        ).listOf()
+
+    override suspend fun onLogin(key: String, data: Map<String, String?>): List<User> {
+        val username = data["username"] ?: return emptyList()
+        val password = data["password"] ?: return emptyList()
         val user = api.login(username, password)
         api.updateUser(user)
         return user.listOf()

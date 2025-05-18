@@ -4,6 +4,11 @@ import dev.brahmkshatriya.echo.common.helpers.ClientException
 import dev.brahmkshatriya.echo.common.models.ImageHolder.Companion.toImageHolder
 import dev.brahmkshatriya.echo.common.models.User
 import dev.brahmkshatriya.echo.config.BuildConfig
+import dev.brahmkshatriya.echo.extension.lastfm.generateUrlWithSig
+import dev.brahmkshatriya.echo.extension.lastfm.isNull
+import dev.brahmkshatriya.echo.extension.lastfm.log
+import dev.brahmkshatriya.echo.extension.lastfm.toJSONObject
+import dev.brahmkshatriya.echo.extension.lastfm.urlBuilder
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.RequestBody
