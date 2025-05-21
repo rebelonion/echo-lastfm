@@ -19,27 +19,7 @@
 # If you keep the line number information, uncomment this to
 # hide the original source file name.
 #-renamesourcefileattribute SourceFile
--keep class dev.brahmkshatriya.echo.extension.LastFM {
-    *;
-}
--keep class dev.brahmkshatriya.echo.common.** { *; }
--keep @interface * { *; }
--keepnames class dev.brahmkshatriya.echo.common.** { *; }
--keep interface dev.brahmkshatriya.echo.common.clients.TrackerClient
--keep interface dev.brahmkshatriya.echo.common.clients.LoginClient
--keep interface dev.brahmkshatriya.echo.common.clients.ExtensionClient
--keep class dev.brahmkshatriya.echo.common.models.** { *; }
--keepclassmembers class dev.brahmkshatriya.echo.common.** {
-    @dev.brahmkshatriya.echo.common.* <fields>;
-}
--keep interface dev.brahmkshatriya.echo.common.clients.TrackerClient {
-    <methods>;
-}
--keep class dev.brahmkshatriya.echo.common.models.EchoMediaItem {
-    <methods>;
-}
--keep class dev.brahmkshatriya.echo.common.models.Track {
-    <methods>;
-}
--keepnames class kotlin.coroutines.Continuation { *; }
--dontwarn org.jspecify.annotations.NullMarked
+-keep class kotlin.** { *; }
+-keep class dev.brahmkshatriya.echo.common.* { *; }
+-keep class dev.brahmkshatriya.echo.extension.LastFM
+-dontobfuscate

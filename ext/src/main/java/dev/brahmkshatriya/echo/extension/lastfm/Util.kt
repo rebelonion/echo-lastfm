@@ -2,7 +2,6 @@ package dev.brahmkshatriya.echo.extension.lastfm
 
 import dev.brahmkshatriya.echo.config.BuildConfig
 import dev.brahmkshatriya.echo.extension.LastFMAPI.Companion.PLUGIN_IDENTIFIER
-import org.json.JSONObject
 
 /**
  * Logs a message to the console if the app is in debug mode.
@@ -26,9 +25,3 @@ fun <T> T.listOf(): List<T> = listOf(this)
  * @return True if the object is null, false otherwise.
  */
 fun <T> T?.isNull(): Boolean = this == null
-
-/**
- * Converts a string to a JSONObject.
- * @return The JSONObject.
- */
-fun String.toJSONObject() = JSONObject(this)

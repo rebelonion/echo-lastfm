@@ -7,8 +7,13 @@ import dev.brahmkshatriya.echo.config.BuildConfig
 import dev.brahmkshatriya.echo.extension.lastfm.generateUrlWithSig
 import dev.brahmkshatriya.echo.extension.lastfm.isNull
 import dev.brahmkshatriya.echo.extension.lastfm.log
-import dev.brahmkshatriya.echo.extension.lastfm.toJSONObject
 import dev.brahmkshatriya.echo.extension.lastfm.urlBuilder
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.contentOrNull
+import kotlinx.serialization.json.intOrNull
+import kotlinx.serialization.json.jsonArray
+import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.jsonPrimitive
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.RequestBody
@@ -70,19 +75,31 @@ class LastFMAPI {
         val method = "auth.getMobileSession"
         val url = generateUrlWithSig(method, null, parameters)
         val (code, body) = sendRequest(url)
-        val jsonObject = body.toJSONObject()
+        val json = Json { ignoreUnknownKeys = true }
+        val jsonObject = json.parseToJsonElement(body).jsonObject
+
         return if (code.isNull()) {
             log(body)
-            val sessionJson = jsonObject.getJSONObject("session")
-            val name = sessionJson.getString("name")
-            val key = sessionJson.getString("key")
+            val sessionJson = jsonObject["session"]?.jsonObject
+                ?: throw Exception("Session data not found")
+
+            val name = sessionJson["name"]?.jsonPrimitive?.contentOrNull
+                ?: throw Exception("Name not found in session")
+
+            val key = sessionJson["key"]?.jsonPrimitive?.contentOrNull
+                ?: throw Exception("Key not found in session")
+
             val image = getPFP(name)
             User(key, name, image?.toImageHolder())
         } else {
             log("Unexpected code $code")
             log(body)
-            val errorCode = jsonObject.getInt("error")
-            val message = jsonObject.getString("message")
+            val errorCode = jsonObject["error"]?.jsonPrimitive?.intOrNull
+                ?: throw Exception("Error code not found")
+
+            val message = jsonObject["message"]?.jsonPrimitive?.contentOrNull
+                ?: throw Exception("Error message not found")
+
             throw Exception("Error $errorCode: $message")
         }
     }
@@ -93,16 +110,20 @@ class LastFMAPI {
         parameters["api_key"] = getApiKey()
         val url = urlBuilder("user.getinfo", parameters)
         val (_, body) = sendRequest(url)
-        val userObject = body.toJSONObject().getJSONObject("user")
-        val images = userObject.getJSONArray("image")
+        val json = Json { ignoreUnknownKeys = true }
+        val userObject = json.parseToJsonElement(body).jsonObject
+        val images = userObject["image"]?.jsonArray
+            ?: throw Exception("Image data not found")
 
         var mediumImage: String? = null
         var largeImage: String? = null
 
-        for (i in 0 until images.length()) {
-            val imageObject = images.getJSONObject(i)
-            val size = imageObject.getString("size")
-            val imUrl = imageObject.getString("#text")
+        for (i in images.indices) {
+            val imageObject = images[i].jsonObject
+            val size = imageObject["size"]?.jsonPrimitive?.contentOrNull
+                ?: throw Exception("Size not found in image data")
+            val imUrl = imageObject["#text"]?.jsonPrimitive?.contentOrNull
+                ?: throw Exception("Image URL not found in image data")
 
             when (size) {
                 "medium" -> mediumImage = imUrl
@@ -151,11 +172,11 @@ class LastFMAPI {
             "$PLUGIN_IDENTIFIER/${BuildConfig.versionCode()} (${System.getProperty("os.name")}:${System.getProperty("os.version")})"
 
         fun getApiKey(): String {
-            return BuildConfig.getKey()
+            return BuildConfig.getK()
         }
 
         fun getSecret(): String {
-            return BuildConfig.getSecret()
+            return BuildConfig.getScrt()
         }
     }
 }

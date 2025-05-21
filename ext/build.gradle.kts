@@ -1,6 +1,6 @@
 import java.io.ByteArrayOutputStream
 import com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar
-import java.util.Properties
+import java.io.IOException
 
 plugins {
     id("java-library")
@@ -21,12 +21,6 @@ kotlin {
 dependencies {
     val libVersion: String by project
     compileOnly("com.github.brahmkshatriya:echo:$libVersion")
-
-    api("com.github.Blatzar:NiceHttp:0.4.11")
-    api("org.json:json:20231013")
-    testImplementation("junit:junit:4.13.2")
-    testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.8.1")
-    testImplementation("com.github.brahmkshatriya:echo:$libVersion")
 }
 
 // Extension properties goto `gradle.properties` to set values
@@ -49,7 +43,8 @@ val gitHash = execute("git", "rev-parse", "HEAD").take(7)
 val gitCount = execute("git", "rev-list", "--count", "HEAD").toInt()
 val verCode = gitCount
 val verName = gitHash
-
+println("Version Code: $verCode")
+println("Version Name: $verName")
 tasks {
     val shadowJar by getting(ShadowJar::class) {
         archiveBaseName.set(extId)
@@ -80,10 +75,23 @@ tasks {
 }
 
 fun execute(vararg command: String): String {
-    val outputStream = ByteArrayOutputStream()
-    project.exec {
-        commandLine(*command)
-        standardOutput = outputStream
+    val process = ProcessBuilder(*command)
+        .redirectOutput(ProcessBuilder.Redirect.PIPE)
+        .redirectError(ProcessBuilder.Redirect.PIPE)
+        .start()
+
+    val output = process.inputStream.bufferedReader().readText()
+    val errorOutput = process.errorStream.bufferedReader().readText()
+
+    val exitCode = process.waitFor()
+
+    if (exitCode != 0) {
+        throw IOException(
+            "Command failed with exit code $exitCode. Command: ${command.joinToString(" ")}\n" +
+                    "Stdout:\n$output\n" +
+                    "Stderr:\n$errorOutput"
+        )
     }
-    return outputStream.toString().trim()
+
+    return output.trim()
 }
