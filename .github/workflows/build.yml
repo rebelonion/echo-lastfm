@@ -29,8 +29,8 @@ jobs:
           echo "VERSION=v$version" >> $GITHUB_ENV
           echo "APP_PATH=app/build/${{ env.TAG }}-$version.eapk" >> $GITHUB_ENV
           echo "${{ secrets.KEYSTORE_B64 }}" | base64 -d > $GITHUB_WORKSPACE/signing-key.jks
-          mkdir -p ext/src/main/java/dev/brahmkshatriya/echo/config
-          echo "${{ secrets.BUILD_CONFIG_CONTENT }}" | base64 -d > ext/src/main/java/dev/brahmkshatriya/echo/config/BuildConfig.kt
+          mkdir -p ext/src/main/java/dev/brahmkshatriya/echo/extension/config
+          echo "${{ secrets.BUILD_CONFIG_CONTENT }}" | base64 -d > ext/src/main/java/dev/brahmkshatriya/echo/extension/config/BuildConfig.kt
           chmod +x ./gradlew
 
       - name: Build with Gradle

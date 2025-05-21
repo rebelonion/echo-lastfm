@@ -3,11 +3,14 @@ package dev.brahmkshatriya.echo.extension
 import dev.brahmkshatriya.echo.common.helpers.ClientException
 import dev.brahmkshatriya.echo.common.models.ImageHolder.Companion.toImageHolder
 import dev.brahmkshatriya.echo.common.models.User
-import dev.brahmkshatriya.echo.config.BuildConfig
-import dev.brahmkshatriya.echo.extension.lastfm.generateUrlWithSig
+import dev.brahmkshatriya.echo.common.settings.Settings
+import dev.brahmkshatriya.echo.extension.config.BuildConfig
+import dev.brahmkshatriya.echo.extension.lastfm.UrlBuilder.Companion.generateUrlWithSig
+import dev.brahmkshatriya.echo.extension.lastfm.UrlBuilder.Companion.urlBuilder
+import dev.brahmkshatriya.echo.extension.lastfm.addScrobble
 import dev.brahmkshatriya.echo.extension.lastfm.isNull
 import dev.brahmkshatriya.echo.extension.lastfm.log
-import dev.brahmkshatriya.echo.extension.lastfm.urlBuilder
+import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.intOrNull
@@ -18,26 +21,42 @@ import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.RequestBody
 import okhttp3.RequestBody.Companion.toRequestBody
+import java.io.IOException
 import java.util.concurrent.TimeUnit.SECONDS
+
+@Serializable
+data class Scrobble(
+    val artist: String,
+    val track: String,
+    val timestamp: Long,
+    val album: String? = null,
+    val addedAt: Long = System.currentTimeMillis() / 1000 / 60, // Only save one track per minute
+)
 
 class LastFMAPI {
     private var user: User? = null
+    private var settings: Settings? = null
     private val client = OkHttpClient.Builder()
         .connectTimeout(10, SECONDS)
         .readTimeout(10, SECONDS)
         .writeTimeout(10, SECONDS).build()
 
-    fun sendNowPlaying(track: String, artist: String, album: String?) {
+    fun sendNowPlaying(scrobble: Scrobble) {
         if (getSessionKey().isNullOrBlank()) throw loginRequiredException()
         val parameters: MutableMap<String, String> = mutableMapOf()
-        parameters["artist"] = artist
-        parameters["track"] = track
-        if (!album.isNullOrBlank()) {
-            parameters["album"] = album
+        parameters["artist"] = scrobble.artist
+        parameters["track"] = scrobble.track
+        if (!scrobble.album.isNullOrBlank()) {
+            parameters["album"] = scrobble.album
         }
         val method = "track.updateNowPlaying"
         val url = generateUrlWithSig(method, getSessionKey(), parameters)
-        val (code, body) = sendRequest(url)
+        val (code, body) = try{
+            sendRequest(url)
+        } catch (e: IOException) { // We're going to assume this means no internet
+            log("Network error: ${e.message}")
+            return // Hiding it so user doesn't get spammed with errors when offline
+        }
         if (code.isNull()) {
             log(body)
         } else {
@@ -47,18 +66,24 @@ class LastFMAPI {
         }
     }
 
-    fun sendScrobble(timestamp: Long, track: String, artist: String, album: String?) {
+    fun sendScrobble(scrobble: Scrobble): Boolean {
         if (getSessionKey().isNullOrBlank()) throw loginRequiredException()
         val parameters: MutableMap<String, String> = mutableMapOf()
-        parameters["artist"] = artist
-        parameters["track"] = track
-        parameters["timestamp"] = timestamp.toString()
-        if (!album.isNullOrBlank()) {
-            parameters["album"] = album
+        parameters["artist"] = scrobble.artist
+        parameters["track"] = scrobble.track
+        parameters["timestamp"] = scrobble.timestamp.toString()
+        if (!scrobble.album.isNullOrBlank()) {
+            parameters["album"] = scrobble.album
         }
         val method = "track.scrobble"
         val url = generateUrlWithSig(method, getSessionKey(), parameters)
-        val (code, body) = sendRequest(url)
+        val (code, body) = try {
+            sendRequest(url)
+        } catch (e: IOException) {
+            log("Network error: ${e.message}")
+            settings?.addScrobble(scrobble)
+            return false
+        }
         if (code.isNull()) {
             log(body)
         } else {
@@ -66,6 +91,7 @@ class LastFMAPI {
             log(body)
             throw Exception("Scrobble Error $code}: $body")
         }
+        return true
     }
 
     fun login(username: String, password: String): User {
@@ -111,7 +137,8 @@ class LastFMAPI {
         val url = urlBuilder("user.getinfo", parameters)
         val (_, body) = sendRequest(url)
         val json = Json { ignoreUnknownKeys = true }
-        val userObject = json.parseToJsonElement(body).jsonObject
+        val userObject = json.parseToJsonElement(body).jsonObject["user"]?.jsonObject
+            ?: throw Exception("User data not found")
         val images = userObject["image"]?.jsonArray
             ?: throw Exception("Image data not found")
 
@@ -142,6 +169,10 @@ class LastFMAPI {
         return user
     }
 
+    fun updateSettings(settings: Settings?) {
+        this.settings = settings
+    }
+
     private fun getSessionKey(): String? {
         return user?.id
     }
@@ -168,6 +199,7 @@ class LastFMAPI {
 
     companion object {
         const val PLUGIN_IDENTIFIER = "Echo-Lastfm-Plugin"
+        const val SAVED_SCROBBLES_SETTINGS_KEY = "saved_scrobbles"
         private val USER_AGENT =
             "$PLUGIN_IDENTIFIER/${BuildConfig.versionCode()} (${System.getProperty("os.name")}:${System.getProperty("os.version")})"
 

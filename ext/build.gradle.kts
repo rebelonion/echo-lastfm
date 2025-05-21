@@ -1,4 +1,3 @@
-import java.io.ByteArrayOutputStream
 import com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar
 import java.io.IOException
 
@@ -21,6 +20,7 @@ kotlin {
 dependencies {
     val libVersion: String by project
     compileOnly("com.github.brahmkshatriya:echo:$libVersion")
+    compileOnly("org.jetbrains.kotlin:kotlin-stdlib:2.1.0")
 }
 
 // Extension properties goto `gradle.properties` to set values
@@ -43,8 +43,7 @@ val gitHash = execute("git", "rev-parse", "HEAD").take(7)
 val gitCount = execute("git", "rev-list", "--count", "HEAD").toInt()
 val verCode = gitCount
 val verName = gitHash
-println("Version Code: $verCode")
-println("Version Name: $verName")
+
 tasks {
     val shadowJar by getting(ShadowJar::class) {
         archiveBaseName.set(extId)

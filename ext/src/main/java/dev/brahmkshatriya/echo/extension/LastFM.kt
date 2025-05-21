@@ -7,8 +7,12 @@ import dev.brahmkshatriya.echo.common.models.TrackDetails
 import dev.brahmkshatriya.echo.common.models.User
 import dev.brahmkshatriya.echo.common.settings.Setting
 import dev.brahmkshatriya.echo.common.settings.Settings
+import dev.brahmkshatriya.echo.extension.lastfm.getScrobbles
 import dev.brahmkshatriya.echo.extension.lastfm.listOf
+import dev.brahmkshatriya.echo.extension.lastfm.removeScrobble
+import java.io.IOException
 
+@Suppress("unused")
 class LastFM : ExtensionClient, LoginClient.CustomInput, TrackerClient {
     private val api = LastFMAPI()
 
@@ -22,14 +26,49 @@ class LastFM : ExtensionClient, LoginClient.CustomInput, TrackerClient {
         var artists = details.track.artists.joinToString(",") { it.name }
         if (artists.isBlank() && details.track.title.isBlank()) return
         if (artists.isBlank()) artists = details.track.title
-        api.sendScrobble(timestamp, details.track.title, artists, details.track.album?.title)
+        val success = api.sendScrobble(
+            Scrobble(
+                artist = artists,
+                track = details.track.title,
+                timestamp = timestamp,
+                album = details.track.album?.title
+            )
+        )
+        if (success) {
+            val scrobbles = setting.getScrobbles()
+            if (scrobbles.isNotEmpty()) {
+                for (scrobble in scrobbles) {
+                    var shouldRemove = false
+                    try {
+                        api.sendScrobble(scrobble)
+                        shouldRemove = true
+                    } catch (e: Exception) {
+                        if (e !is IOException) {
+                            shouldRemove = true
+                        }
+                    }
+
+                    if (shouldRemove) {
+                        setting.removeScrobble(scrobble)
+                    }
+                }
+            }
+
+        }
     }
 
     override suspend fun onTrackChanged(details: TrackDetails?) {
         val title = details?.track?.title ?: return
         var artists = details.track.artists.joinToString(",") { it.name }
         if (artists.isBlank()) artists = title
-        api.sendNowPlaying(details.track.title, artists, details.track.album?.title)
+        api.sendNowPlaying(
+            Scrobble(
+                artist = artists,
+                track = title,
+                timestamp = System.currentTimeMillis() / 1000 - 30,
+                album = details.track.album?.title
+            )
+        )
     }
 
     override suspend fun getCurrentUser(): User? {
@@ -41,7 +80,7 @@ class LastFM : ExtensionClient, LoginClient.CustomInput, TrackerClient {
             key = "login",
             label = "Login",
             icon = LoginClient.InputField.Type.Username,
-            inputFields = kotlin.collections.listOf(
+            inputFields = listOf(
                 LoginClient.InputField(
                     type = LoginClient.InputField.Type.Username,
                     key = "username",
@@ -78,6 +117,7 @@ class LastFM : ExtensionClient, LoginClient.CustomInput, TrackerClient {
     private lateinit var setting: Settings
     override fun setSettings(settings: Settings) {
         setting = settings
+        api.updateSettings(settings)
     }
 
 }
