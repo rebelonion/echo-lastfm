@@ -45,7 +45,7 @@ class LastFM : ExtensionClient, LoginClient.CustomInput, TrackerClient {
                 LoginClient.InputField(
                     type = LoginClient.InputField.Type.Username,
                     key = "username",
-                    label = "Username",
+                    label = "Username (not email)",
                     isRequired = true,
                 ),
                 LoginClient.InputField(
