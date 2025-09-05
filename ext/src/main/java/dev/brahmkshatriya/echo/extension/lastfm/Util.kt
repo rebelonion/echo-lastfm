@@ -31,6 +31,21 @@ fun <T> T.listOf(): List<T> = listOf(this)
  */
 fun <T> T?.isNull(): Boolean = this == null
 
+data class SettingData<T>(
+    val key: String,
+    val default: T
+) {
+    @Suppress("UNCHECKED_CAST")
+    fun get(settings: Settings): T {
+        return when (default) {
+            is Boolean -> (settings.getBoolean(key) ?: default) as T
+            is String -> (settings.getString(key) ?: default) as T
+            is Int -> (settings.getInt(key) ?: default) as T
+            is Set<*> -> (settings.getStringSet(key) ?: default) as T
+            else -> throw IllegalArgumentException("Unsupported type")
+        }
+    }
+}
 
 fun Settings.addScrobble(
     scrobble: Scrobble

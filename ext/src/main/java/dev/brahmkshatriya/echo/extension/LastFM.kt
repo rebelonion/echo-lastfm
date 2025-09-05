@@ -3,27 +3,40 @@ package dev.brahmkshatriya.echo.extension
 import dev.brahmkshatriya.echo.common.clients.ExtensionClient
 import dev.brahmkshatriya.echo.common.clients.LoginClient
 import dev.brahmkshatriya.echo.common.clients.TrackerClient
+import dev.brahmkshatriya.echo.common.clients.TrackerMarkClient
 import dev.brahmkshatriya.echo.common.models.TrackDetails
 import dev.brahmkshatriya.echo.common.models.User
 import dev.brahmkshatriya.echo.common.settings.Setting
+import dev.brahmkshatriya.echo.common.settings.SettingSlider
+import dev.brahmkshatriya.echo.common.settings.SettingSwitch
 import dev.brahmkshatriya.echo.common.settings.Settings
+import dev.brahmkshatriya.echo.extension.lastfm.SettingData
 import dev.brahmkshatriya.echo.extension.lastfm.getScrobbles
 import dev.brahmkshatriya.echo.extension.lastfm.listOf
 import dev.brahmkshatriya.echo.extension.lastfm.removeScrobble
 import java.io.IOException
 
 @Suppress("unused")
-class LastFM : ExtensionClient, LoginClient.CustomInput, TrackerClient {
+class LastFM : ExtensionClient, LoginClient.CustomInput, TrackerClient, TrackerMarkClient {
     private val api = LastFMAPI()
 
-    override val markAsPlayedDuration: Long
-        get() = 60 * 1000 // 1 minute
+    override suspend fun getMarkAsPlayedDuration(details: TrackDetails): Long? {
+        details.track.duration?.let {
+            if (it <= 0) return MARK_AS_PLAYED_DURATION_SETTING.default * 1000L
+            return markAsPlayedDuration(it)
+        }
+        return MARK_AS_PLAYED_DURATION_SETTING.default * 1000L
+    }
 
     override suspend fun onExtensionSelected() {}
 
+    override suspend fun onPlayingStateChanged(details: TrackDetails?, isPlaying: Boolean) {
+
+    }
+
     override suspend fun onMarkAsPlayed(details: TrackDetails) {
         val timestamp = System.currentTimeMillis() / 1000 - 30
-        var artists = details.track.artists.joinToString(",") { it.name }
+        var artists = details.getArtistString()
         if (artists.isBlank() && details.track.title.isBlank()) return
         if (artists.isBlank()) artists = details.track.title
         val success = api.sendScrobble(
@@ -58,8 +71,9 @@ class LastFM : ExtensionClient, LoginClient.CustomInput, TrackerClient {
     }
 
     override suspend fun onTrackChanged(details: TrackDetails?) {
+        if (!isNowPlayingEnabled()) return
         val title = details?.track?.title ?: return
-        var artists = details.track.artists.joinToString(",") { it.name }
+        var artists = details.getArtistString()
         if (artists.isBlank()) artists = title
         api.sendNowPlaying(
             Scrobble(
@@ -104,7 +118,7 @@ class LastFM : ExtensionClient, LoginClient.CustomInput, TrackerClient {
         return user.listOf()
     }
 
-    override suspend fun onSetLoginUser(user: User?) {
+    override fun setLoginUser(user: User?) {
         if (user?.id == null) {
             api.updateUser(null)
         } else {
@@ -112,12 +126,74 @@ class LastFM : ExtensionClient, LoginClient.CustomInput, TrackerClient {
         }
     }
 
-    override val settingItems: List<Setting> = emptyList()
+    override suspend fun getSettingItems(): List<Setting> {
+        return listOf(
+            SettingSlider(
+                key = MARK_AS_PLAYED_DURATION_SETTING.key,
+                title = "Mark as Played Duration (in seconds)",
+                summary = "Duration after which a track is marked as played",
+                defaultValue = 60,
+                from = 10,
+                to = 300,
+                steps = 10
+            ),
+            SettingSlider(
+                key = MARK_AS_PLAYED_PERCENTAGE_SETTING.key,
+                title = "Mark as Played Percentage",
+                summary = "Percentage of track duration after which a track is marked as played",
+                defaultValue = 50,
+                from = 20,
+                to = 100,
+            ),
+            SettingSwitch(
+                key = ONLY_USE_FIRST_ARTIST_SETTING.key,
+                title = "Only use first artist",
+                summary = "If a track has multiple artists, only the first one will be used",
+                defaultValue = true
+            ),
+            SettingSwitch(
+                key = ENABLE_NOW_PLAYING_SETTING.key,
+                title = "Enable Now Playing",
+                summary = "Send Now Playing updates to Last.fm",
+                defaultValue = true
+            )
+        )
+    }
 
     private lateinit var setting: Settings
     override fun setSettings(settings: Settings) {
         setting = settings
         api.updateSettings(settings)
+    }
+
+    fun markAsPlayedDuration(songDuration: Long): Long {
+        val durationSetting = MARK_AS_PLAYED_DURATION_SETTING.get(setting)
+        val percentageSetting = MARK_AS_PLAYED_PERCENTAGE_SETTING.get(setting)
+        val percentageDuration = (songDuration * percentageSetting) / 100
+        return minOf(durationSetting * 1000L, percentageDuration)
+    }
+
+    fun TrackDetails.getArtistString(): String {
+        return if (ONLY_USE_FIRST_ARTIST_SETTING.get(setting)) {
+            this.track.artists.firstOrNull()?.name ?: ""
+        } else {
+            this.track.artists.joinToString(",") { it.name }
+        }
+    }
+
+    fun isNowPlayingEnabled(): Boolean {
+        return ENABLE_NOW_PLAYING_SETTING.get(setting)
+    }
+
+    companion object {
+        val MARK_AS_PLAYED_DURATION_SETTING: SettingData<Int> =
+            SettingData("mark_as_played_duration", 60)
+        val MARK_AS_PLAYED_PERCENTAGE_SETTING: SettingData<Int> =
+            SettingData("mark_as_played_percentage", 50)
+        val ONLY_USE_FIRST_ARTIST_SETTING: SettingData<Boolean> =
+            SettingData("only_use_first_artist", true)
+        val ENABLE_NOW_PLAYING_SETTING: SettingData<Boolean> =
+            SettingData("enable_now_playing", true)
     }
 
 }

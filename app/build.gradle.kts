@@ -7,9 +7,8 @@ plugins {
 
 dependencies {
     implementation(project(":ext"))
-    val libVersion: String by project
-    compileOnly("com.github.brahmkshatriya:echo:$libVersion")
-    compileOnly("org.jetbrains.kotlin:kotlin-stdlib:2.1.0")
+    compileOnly("dev.brahmkshatriya.echo:common:1.0")
+    compileOnly("org.jetbrains.kotlin:kotlin-stdlib:2.2.10")
 }
 
 val extType: String by project
@@ -58,11 +57,11 @@ tasks.register("uninstall") {
 
 android {
     namespace = "dev.brahmkshatriya.echo.extension"
-    compileSdk = 35
+    compileSdk = 36
     defaultConfig {
         applicationId = "dev.brahmkshatriya.echo.extension.$extId"
         minSdk = 24
-        targetSdk = 35
+        targetSdk = 36
 
         manifestPlaceholders.apply {
             put("type", "dev.brahmkshatriya.echo.${extType}")
