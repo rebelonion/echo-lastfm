@@ -1,6 +1,7 @@
 package dev.brahmkshatriya.echo.extension
 
 import dev.brahmkshatriya.echo.common.helpers.ClientException
+import dev.brahmkshatriya.echo.common.helpers.ContinuationCallback.Companion.await
 import dev.brahmkshatriya.echo.common.models.ImageHolder.Companion.toImageHolder
 import dev.brahmkshatriya.echo.common.models.User
 import dev.brahmkshatriya.echo.common.settings.Settings
@@ -41,7 +42,7 @@ class LastFMAPI {
         .readTimeout(10, SECONDS)
         .writeTimeout(10, SECONDS).build()
 
-    fun sendNowPlaying(scrobble: Scrobble) {
+    suspend fun sendNowPlaying(scrobble: Scrobble) {
         if (getSessionKey().isNullOrBlank()) throw loginRequiredException()
         val parameters: MutableMap<String, String> = mutableMapOf()
         parameters["artist"] = scrobble.artist
@@ -66,7 +67,7 @@ class LastFMAPI {
         }
     }
 
-    fun sendScrobble(scrobble: Scrobble): Boolean {
+    suspend fun sendScrobble(scrobble: Scrobble): Boolean {
         if (getSessionKey().isNullOrBlank()) throw loginRequiredException()
         val parameters: MutableMap<String, String> = mutableMapOf()
         parameters["artist"] = scrobble.artist
@@ -94,7 +95,7 @@ class LastFMAPI {
         return true
     }
 
-    fun login(username: String, password: String): User {
+    suspend fun login(username: String, password: String): User {
         val parameters: MutableMap<String, String> = mutableMapOf()
         parameters["username"] = username
         parameters["password"] = password
@@ -130,7 +131,7 @@ class LastFMAPI {
         }
     }
 
-    private fun getPFP(username: String): String? {
+    private suspend fun getPFP(username: String): String? {
         val parameters: MutableMap<String, String> = mutableMapOf()
         parameters["user"] = username
         parameters["api_key"] = getApiKey()
@@ -182,9 +183,9 @@ class LastFMAPI {
         return Request.Builder().url(url).post(sendBody).header("User-Agent", USER_AGENT).build()
     }
 
-    private fun sendRequest(url: String, body: RequestBody? = null): Pair<Int?, String> {
+    private suspend fun sendRequest(url: String, body: RequestBody? = null): Pair<Int?, String> {
         val request = buildRequest(url, body)
-        val response = client.newCall(request).execute()
+        val response = client.newCall(request).await()
         val responseBody = response.body.string()
         val code = if (!response.isSuccessful)
             response.code
