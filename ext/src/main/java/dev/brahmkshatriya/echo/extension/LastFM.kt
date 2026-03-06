@@ -9,8 +9,10 @@ import dev.brahmkshatriya.echo.common.models.User
 import dev.brahmkshatriya.echo.common.settings.Setting
 import dev.brahmkshatriya.echo.common.settings.SettingSlider
 import dev.brahmkshatriya.echo.common.settings.SettingSwitch
+import dev.brahmkshatriya.echo.common.settings.SettingTextInput
 import dev.brahmkshatriya.echo.common.settings.Settings
 import dev.brahmkshatriya.echo.extension.lastfm.SettingData
+import dev.brahmkshatriya.echo.extension.lastfm.fixMojibake
 import dev.brahmkshatriya.echo.extension.lastfm.getScrobbles
 import dev.brahmkshatriya.echo.extension.lastfm.listOf
 import dev.brahmkshatriya.echo.extension.lastfm.removeScrobble
@@ -36,15 +38,15 @@ class LastFM : ExtensionClient, LoginClient.CustomInput, TrackerClient, TrackerM
 
     override suspend fun onMarkAsPlayed(details: TrackDetails) {
         val timestamp = System.currentTimeMillis() / 1000 - 30
-        var artists = details.getArtistString()
+        var artists = details.getArtistString().fixMojibake()
         if (artists.isBlank() && details.track.title.isBlank()) return
-        if (artists.isBlank()) artists = details.track.title
+        if (artists.isBlank()) artists = details.track.title.fixMojibake()
         val success = api.sendScrobble(
             Scrobble(
                 artist = artists,
-                track = details.track.title,
+                track = details.track.title.fixMojibake(),
                 timestamp = timestamp,
-                album = details.track.album?.title
+                album = details.track.album?.title?.fixMojibake()
             )
         )
         if (success) {
@@ -72,15 +74,15 @@ class LastFM : ExtensionClient, LoginClient.CustomInput, TrackerClient, TrackerM
 
     override suspend fun onTrackChanged(details: TrackDetails?) {
         if (!isNowPlayingEnabled()) return
-        val title = details?.track?.title ?: return
-        var artists = details.getArtistString()
+        val title = details?.track?.title?.fixMojibake() ?: return
+        var artists = details.getArtistString().fixMojibake()
         if (artists.isBlank()) artists = title
         api.sendNowPlaying(
             Scrobble(
                 artist = artists,
                 track = title,
                 timestamp = System.currentTimeMillis() / 1000 - 30,
-                album = details.track.album?.title
+                album = details.track.album?.title?.fixMojibake()
             )
         )
     }
@@ -156,6 +158,12 @@ class LastFM : ExtensionClient, LoginClient.CustomInput, TrackerClient, TrackerM
                 title = "Enable Now Playing",
                 summary = "Send Now Playing updates to Last.fm",
                 defaultValue = true
+            ),
+            SettingTextInput(
+                key = ARTIST_EXCLUSION_LIST_SETTING.key,
+                title = "Artist Exclusion List",
+                summary = "Semicolon separated list of artists that will never be split even if they contain '&'. Example: Abor & Tynna; Paola & Chiara",
+                defaultValue = ""
             )
         )
     }
@@ -174,6 +182,17 @@ class LastFM : ExtensionClient, LoginClient.CustomInput, TrackerClient, TrackerM
     }
 
     fun TrackDetails.getArtistString(): String {
+        val exclusionList = ARTIST_EXCLUSION_LIST_SETTING.get(setting)
+            .split(";")
+            .map { it.trim() }
+            .filter { it.isNotEmpty() }
+            .ifEmpty { ARTIST_EXCLUSION_LIST_DEFAULT }
+
+        val fullArtist = this.track.artists.joinToString(" & ") { it.name }
+        if (exclusionList.any { it.equals(fullArtist, ignoreCase = true) }) {
+            return fullArtist
+        }
+
         return if (ONLY_USE_FIRST_ARTIST_SETTING.get(setting)) {
             this.track.artists.firstOrNull()?.name ?: ""
         } else {
@@ -194,6 +213,12 @@ class LastFM : ExtensionClient, LoginClient.CustomInput, TrackerClient, TrackerM
             SettingData("only_use_first_artist", true)
         val ENABLE_NOW_PLAYING_SETTING: SettingData<Boolean> =
             SettingData("enable_now_playing", true)
+
+        // Lista de exclusión predeterminada
+        val ARTIST_EXCLUSION_LIST_DEFAULT = emptyList<String>()
+        // Setting para la lista de exclusión personalizada
+        val ARTIST_EXCLUSION_LIST_SETTING: SettingData<String> =
+            SettingData("artist_exclusion_list", "")
     }
 
 }

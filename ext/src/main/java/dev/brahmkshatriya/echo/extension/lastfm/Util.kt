@@ -78,3 +78,16 @@ fun List<Scrobble>.toJsonString(): String{
 fun String.toScrobbles(): List<Scrobble> {
     return Json.decodeFromString(this)
 }
+
+/**
+ * Fixes mojibake caused by Windows-1252 smart punctuation being misread as UTF-8 garbage.
+ * Only replaces known broken sequences, leaving all other characters untouched.
+ */
+fun String.fixMojibake(): String = this
+    .replace("â€™", "\u2019") // ' RIGHT SINGLE QUOTATION MARK
+    .replace("â€˜", "\u2018") // ' LEFT SINGLE QUOTATION MARK
+    .replace("â€œ", "\u201C") // " LEFT DOUBLE QUOTATION MARK
+    .replace("â€\u009D", "\u201D") // " RIGHT DOUBLE QUOTATION MARK
+    .replace("â€\u201C", "\u2013") // – EN DASH
+    .replace("â€\u201D", "\u2014") // — EM DASH
+    .replace("â€¦", "\u2026") // … ELLIPSIS
